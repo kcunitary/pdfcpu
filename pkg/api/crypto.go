@@ -17,7 +17,7 @@
 package api
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/kcunitary/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 

@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/kcunitary/pdfcpu/pkg/api"
 )
 
 func TestMergeCreate(t *testing.T) {

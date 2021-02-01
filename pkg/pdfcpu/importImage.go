@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/types"
+	"github.com/kcunitary/pdfcpu/pkg/types"
 	"github.com/pkg/errors"
 )
 
