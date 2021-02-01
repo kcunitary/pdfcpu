@@ -18,6 +18,7 @@ package api
 
 import (
 	"bufio"
+	"image"
 	"io"
 	"os"
 	"time"
@@ -71,6 +72,70 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 	for _, r := range imgs {
 
 		indRef, err := pdfcpu.NewPageForImage(ctx.XRefTable, r, pagesIndRef, imp)
+		if err != nil {
+			return err
+		}
+
+		if err = pdfcpu.AppendPageTree(indRef, 1, pagesDict); err != nil {
+			return err
+		}
+
+		ctx.PageCount++
+	}
+
+	if conf.ValidationMode != pdfcpu.ValidationNone {
+		if err = ValidateContext(ctx); err != nil {
+			return err
+		}
+	}
+
+	if err = WriteContext(ctx, w); err != nil {
+		return err
+	}
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
+	return nil
+}
+
+func ImportImagesRaw(rs io.ReadSeeker, w io.Writer, imgs []image.Image, imp *pdfcpu.Import, conf *pdfcpu.Configuration) error {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.IMPORTIMAGES
+
+	if imp == nil {
+		imp = pdfcpu.DefaultImportConfig()
+	}
+
+	var (
+		ctx *pdfcpu.Context
+		err error
+	)
+
+	if rs != nil {
+		ctx, _, _, err = readAndValidate(rs, conf, time.Now())
+	} else {
+		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, imp.PageDim)
+	}
+	if err != nil {
+		return err
+	}
+
+	pagesIndRef, err := ctx.Pages()
+	if err != nil {
+		return err
+	}
+
+	// This is the page tree root.
+	pagesDict, err := ctx.DereferenceDict(*pagesIndRef)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range imgs {
+
+		indRef, err := pdfcpu.NewPageForImageRaw(ctx.XRefTable, r, pagesIndRef, imp)
 		if err != nil {
 			return err
 		}

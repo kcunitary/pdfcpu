@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
+	"image"
 	"io"
 	"strconv"
 	"strings"
@@ -432,6 +433,60 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 
 	// create image dict.
 	imgIndRef, w, h, err := createImageResource(xRefTable, r)
+	if err != nil {
+		return nil, err
+	}
+
+	// create resource dict for XObject.
+	d := Dict(
+		map[string]Object{
+			"ProcSet": NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
+			"XObject": Dict(map[string]Object{"Im0": *imgIndRef}),
+		},
+	)
+
+	resIndRef, err := xRefTable.IndRefForNewObject(d)
+	if err != nil {
+		return nil, err
+	}
+
+	dim := &Dim{float64(w), float64(h)}
+	if imp.Pos != Full {
+		dim = imp.PageDim
+	}
+	// mediabox = physical page dimensions
+	mediaBox := RectForDim(dim.Width, dim.Height)
+
+	var buf bytes.Buffer
+	importImagePDFBytes(&buf, dim, float64(w), float64(h), imp)
+	sd, _ := xRefTable.NewStreamDictForBuf(buf.Bytes())
+	if err = sd.Encode(); err != nil {
+		return nil, err
+	}
+
+	contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, err
+	}
+
+	pageDict := Dict(
+		map[string]Object{
+			"Type":      Name("Page"),
+			"Parent":    *parentIndRef,
+			"MediaBox":  mediaBox.Array(),
+			"Resources": *resIndRef,
+			"Contents":  *contentsIndRef,
+		},
+	)
+
+	return xRefTable.IndRefForNewObject(pageDict)
+}
+
+//read data from image.image!
+func NewPageForImageRaw(xRefTable *XRefTable, r image.Image, parentIndRef *IndirectRef, imp *Import) (*IndirectRef, error) {
+
+	// create image dict.
+	imgIndRef, w, h, err := createImageResourceRaw(xRefTable, r)
 	if err != nil {
 		return nil, err
 	}

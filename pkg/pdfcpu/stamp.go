@@ -1157,7 +1157,26 @@ func createImageResource(xRefTable *XRefTable, r io.Reader) (*IndirectRef, int, 
 
 	return indRef, w, h, nil
 }
+func createImageResourceRaw(xRefTable *XRefTable, r image.Image) (*IndirectRef, int, int, error) {
+	var sd *StreamDict
 
+	img := r
+
+	sd, err := imgToImageDict(xRefTable, img)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	w := *sd.IntEntry("Width")
+	h := *sd.IntEntry("Height")
+
+	indRef, err := xRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	return indRef, w, h, nil
+}
 func (ctx *Context) createImageResForWM(wm *Watermark) (err error) {
 	f, err := os.Open(wm.FileName)
 	if err != nil {
